@@ -1,0 +1,9 @@
+select:
+  - platform: haier
+    haier_id: ${device_id}
+    sleep_timer:
+      id: ${device_id}_sleep_timer
+      name: ${device_name} Sleep Timer
+    sleep_timer_countdown:
+      id: ${device_id}_sleep_timer_countdown
+      name: ${device_name} Sleep Timer Countdown

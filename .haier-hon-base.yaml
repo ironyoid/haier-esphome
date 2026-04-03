@@ -16,6 +16,7 @@ packages:
   # Horizontal airflow direction setting. Works only if the horizontal swing
   # is off. You can remove this control if you don't need it
   airflow_horizontal_select: !include configs/select/airflow_horizontal.yaml
+  sleep_timer_select: !include configs/select/sleep_timer.yaml
   # Additional sensors
   outdoor_temperature_sensor: !include configs/sensor/outdoor_temperature.yaml
   # Make sure that your AC supports humidity before uncommenting it

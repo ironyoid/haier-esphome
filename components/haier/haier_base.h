@@ -10,6 +10,12 @@
 #ifdef USE_SWITCH
 #include "esphome/components/switch/switch.h"
 #endif
+#ifdef USE_SELECT
+#include "esphome/components/select/select.h"
+#endif
+#ifdef USE_SENSOR
+#include "esphome/components/sensor/sensor.h"
+#endif
 
 namespace esphome {
 namespace haier {
@@ -40,6 +46,25 @@ class HaierClimateBase : public esphome::Component,
  protected:
   switch_::Switch *display_switch_{nullptr};
   switch_::Switch *health_mode_switch_{nullptr};
+#endif
+#ifdef USE_SELECT
+ public:
+  void set_sleep_timer_select(select::Select *sel);
+  void set_sleep_timer(const std::string &value);
+  void cancel_sleep_timer();
+
+ protected:
+  select::Select *sleep_timer_select_{nullptr};
+  bool sleep_timer_active_{false};
+  std::chrono::steady_clock::time_point sleep_timer_end_time_;
+#endif
+#if defined(USE_SELECT) && defined(USE_SENSOR)
+ public:
+  void set_sleep_timer_countdown_sensor(sensor::Sensor *sens);
+
+ protected:
+  sensor::Sensor *sleep_timer_countdown_sensor_{nullptr};
+  int last_published_countdown_{-1};
 #endif
  public:
   HaierClimateBase();

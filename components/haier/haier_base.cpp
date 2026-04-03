@@ -301,6 +301,27 @@ void HaierClimateBase::loop() {
     this->health_mode_switch_->publish_state(this->get_health_mode());
   }
 #endif  // USE_SWITCH
+#ifdef USE_SELECT
+  if (this->sleep_timer_active_ && this->mode == CLIMATE_MODE_OFF) {
+    this->cancel_sleep_timer();
+  }
+#if defined(USE_SENSOR)
+  if (this->sleep_timer_countdown_sensor_ != nullptr) {
+    if (this->sleep_timer_active_) {
+      auto remaining = std::chrono::duration_cast<std::chrono::minutes>(
+          this->sleep_timer_end_time_ - std::chrono::steady_clock::now());
+      int mins = std::max(0, (int) remaining.count());
+      if (mins != this->last_published_countdown_) {
+        this->last_published_countdown_ = mins;
+        this->sleep_timer_countdown_sensor_->publish_state(mins);
+      }
+    } else if (this->last_published_countdown_ != 0) {
+      this->last_published_countdown_ = 0;
+      this->sleep_timer_countdown_sensor_->publish_state(0);
+    }
+  }
+#endif  // USE_SENSOR
+#endif  // USE_SELECT
 }
 
 void HaierClimateBase::process_protocol_reset() {
@@ -402,6 +423,71 @@ void HaierClimateBase::set_health_mode_switch(switch_::Switch *sw) {
   }
 }
 #endif
+
+#ifdef USE_SELECT
+void HaierClimateBase::set_sleep_timer_select(select::Select *sel) { this->sleep_timer_select_ = sel; }
+
+void HaierClimateBase::set_sleep_timer(const std::string &value) {
+  this->cancel_timeout("sleep_timer");
+  this->sleep_timer_active_ = false;
+  if (value == "Off") {
+    return;
+  }
+  uint32_t ms = 0;
+  if (value == "0.5h") {
+    ms = 30 * 60 * 1000UL;
+  } else if (value == "1h") {
+    ms = 60 * 60 * 1000UL;
+  } else if (value == "2h") {
+    ms = 2 * 60 * 60 * 1000UL;
+  } else if (value == "3h") {
+    ms = 3 * 60 * 60 * 1000UL;
+  } else if (value == "4h") {
+    ms = 4 * 60 * 60 * 1000UL;
+  } else if (value == "5h") {
+    ms = 5 * 60 * 60 * 1000UL;
+  } else if (value == "6h") {
+    ms = 6 * 60 * 60 * 1000UL;
+  } else if (value == "8h") {
+    ms = 8 * 60 * 60 * 1000UL;
+  } else if (value == "10h") {
+    ms = 10 * 60 * 60 * 1000UL;
+  } else if (value == "12h") {
+    ms = 12 * 60 * 60 * 1000UL;
+  } else if (value == "24h") {
+    ms = 24 * 60 * 60 * 1000UL;
+  }
+  if (ms > 0) {
+    ESP_LOGD(TAG, "Sleep timer set to %s (%lu ms)", value.c_str(), (unsigned long) ms);
+    this->sleep_timer_active_ = true;
+    this->sleep_timer_end_time_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+    this->set_timeout("sleep_timer", ms, [this]() {
+      ESP_LOGD(TAG, "Sleep timer expired, turning off");
+      this->send_power_off_command();
+      this->sleep_timer_active_ = false;
+      if (this->sleep_timer_select_ != nullptr) {
+        this->sleep_timer_select_->publish_state("Off");
+      }
+    });
+  }
+}
+
+void HaierClimateBase::cancel_sleep_timer() {
+  if (this->sleep_timer_active_) {
+    ESP_LOGD(TAG, "Sleep timer cancelled");
+    this->cancel_timeout("sleep_timer");
+    this->sleep_timer_active_ = false;
+    if (this->sleep_timer_select_ != nullptr) {
+      this->sleep_timer_select_->publish_state("Off");
+    }
+  }
+}
+#ifdef USE_SENSOR
+void HaierClimateBase::set_sleep_timer_countdown_sensor(sensor::Sensor *sens) {
+  this->sleep_timer_countdown_sensor_ = sens;
+}
+#endif  // USE_SENSOR
+#endif  // USE_SELECT
 
 void HaierClimateBase::HvacSettings::reset() {
   this->valid = false;
